@@ -1,0 +1,112 @@
+# ==============================
+# FNN - CIFAR-10 IMPLEMENTATION
+# ==============================
+
+
+# 1. Import Libraries
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Flatten, Dense
+
+
+
+# 2. Load Dataset from Local System
+
+path = r"C:\Users\Vaishnavi\Downloads\cifar10"
+
+train_data = pd.read_csv(path + r"\train.csv")
+
+
+
+# 3. Separate Images and Labels
+
+X = train_data.drop("label", axis=1).values
+y = train_data["label"].values
+
+
+
+# 4. Reshape Images
+
+X = X.reshape(-1, 32, 32, 3)
+
+
+
+# CIFAR-10 Classes
+
+class_names = ['Airplane', 'Automobile', 'Bird', 'Cat', 'Deer',
+               'Dog', 'Frog', 'Horse', 'Ship', 'Truck']
+
+
+
+# 5. Display Image Before Training
+
+i = 10
+
+plt.imshow(X[i])
+plt.title("Before Training: " + class_names[y[i]])
+plt.axis("off")
+plt.show()
+
+
+
+# 6. Normalize Images
+
+X = X / 255.0
+
+
+
+# 7. Build Feedforward Neural Network
+
+model = Sequential([
+    Flatten(input_shape=(32, 32, 3)),
+    Dense(128, activation='relu'),
+    Dense(10, activation='softmax')
+])
+
+
+
+# 8. Compile Model
+
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+
+# 9. Train Model
+
+model.fit(X, y, epochs=5, batch_size=64)
+
+
+
+# 10. Evaluate Model
+
+loss, accuracy = model.evaluate(X, y)
+
+print("Accuracy:", accuracy * 100, "%")
+
+
+
+# 11. Predict Same Image After Training
+
+prediction = model.predict(X[i:i+1], verbose=0)
+predicted_class = np.argmax(prediction)
+
+print("Actual Class:", class_names[y[i]])
+print("Predicted Class:", class_names[predicted_class])
+
+
+
+# 12. Display Same Image After Training
+
+plt.imshow(X[i])
+plt.title("After Training: " + class_names[predicted_class])
+plt.axis("off")
+plt.show()

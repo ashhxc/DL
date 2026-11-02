@@ -1,0 +1,112 @@
+# ==============================
+# CNN - BRAIN TUMOR CLASSIFICATION
+# ==============================
+
+
+# 1. Import Libraries
+
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+
+# 2. Load Dataset
+
+path = "Downloads/brain tumour/Training"
+
+train_data = tf.keras.utils.image_dataset_from_directory(
+    path,
+    validation_split=0.2,
+    subset="training",
+    seed=123,
+    image_size=(150,150),
+    batch_size=32
+)
+
+test_data = tf.keras.utils.image_dataset_from_directory(
+    path,
+    validation_split=0.2,
+    subset="validation",
+    seed=123,
+    image_size=(150,150),
+    batch_size=32
+)
+
+class_names = train_data.class_names
+
+print("Tumor Categories:", class_names)
+
+
+
+# 3. Display Original Image
+
+images, labels = next(iter(train_data))
+
+plt.imshow(images[0].numpy().astype("uint8"))
+plt.title(class_names[labels[0].numpy()])
+plt.axis("off")
+plt.show()
+
+
+
+# 4. Build CNN Model
+
+model = tf.keras.Sequential([
+    tf.keras.layers.Input(shape=(150,150,3)),
+    tf.keras.layers.Rescaling(1./255),
+
+    tf.keras.layers.Conv2D(32, (3,3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Conv2D(64, (3,3), activation='relu'),
+    tf.keras.layers.MaxPooling2D(2,2),
+
+    tf.keras.layers.Flatten(),
+    tf.keras.layers.Dense(128, activation='relu'),
+    tf.keras.layers.Dense(4, activation='softmax')
+])
+
+
+
+# 5. Compile Model
+
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+
+# 6. Train Model
+
+model.fit(
+    train_data,
+    validation_data=test_data,
+    epochs=5
+)
+
+
+
+# 7. Evaluate Model
+
+loss, accuracy = model.evaluate(test_data)
+
+print("Test Accuracy:", accuracy)
+
+
+
+# 8. Actual vs Predicted
+
+images, labels = next(iter(test_data))
+
+prediction = model.predict(images[:1])
+
+actual = class_names[labels[0].numpy()]
+predicted = class_names[np.argmax(prediction[0])]
+
+plt.imshow(images[0].numpy().astype("uint8"))
+plt.title("Actual: " + actual + "\nPredicted: " + predicted)
+plt.axis("off")
+plt.show()

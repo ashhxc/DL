@@ -1,0 +1,112 @@
+# ==============================
+# FNN - MNIST DIGIT RECOGNITION
+# ==============================
+
+# 1. Import Libraries
+
+import tensorflow as tf
+from keras.models import Sequential
+from keras.layers import Dense, Flatten
+from keras.datasets import mnist
+import matplotlib.pyplot as plt
+import numpy as np
+import random
+
+
+# 2. Load MNIST Dataset
+
+(x_train, y_train), (x_test, y_test) = mnist.load_data()
+
+
+# 3. Normalize Dataset
+
+x_train = x_train / 255
+x_test = x_test / 255
+
+
+# 4. Display digits 0 to 9 before training
+
+plt.figure(figsize=(10, 4))
+
+for i in range(10):
+    n = np.where(y_test == i)[0][0]
+
+    plt.subplot(2, 5, i + 1)
+    plt.imshow(x_test[n], cmap='gray')
+    plt.title("Digit: " + str(i))
+    plt.axis('off')
+
+plt.suptitle("MNIST Digits Before Training")
+plt.show()
+
+
+# 5. Build FNN Model
+
+model = Sequential([
+    Flatten(input_shape=(28, 28)),
+    Dense(128, activation='relu'),
+    Dense(10, activation='softmax')
+])
+
+
+# 6. Compile Model
+
+model.compile(
+    optimizer='sgd',
+    loss='sparse_categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+# 7. Train Model
+
+H = model.fit(
+    x_train,
+    y_train,
+    validation_data=(x_test, y_test),
+    epochs=5
+)
+
+
+# 8. Evaluate Model
+
+test_loss, test_acc = model.evaluate(x_test, y_test)
+
+print("Loss = %.3f" % test_loss)
+print("Accuracy = %.3f" % test_acc)
+
+
+# 9. Predict Digits
+
+prediction = model.predict(x_test)
+
+
+# 10. Display predicted digits
+
+for i in range(10):
+    n = np.where(y_test == i)[0][0]
+
+    plt.subplot(2, 5, i + 1)
+    plt.imshow(x_test[n], cmap='gray')
+    plt.title(str(i))
+    plt.axis('off')
+
+plt.show()
+
+
+# 11. Compare Actual and Predicted Digits
+
+for i in range(10):
+    n = np.where(y_test == i)[0][0]
+    print("Digit:", i, "Prediction:", np.argmax(prediction[n]))
+
+
+# 12. Plot Training and Validation Graphs
+
+plt.plot(H.history["loss"], label="Train Loss")
+plt.plot(H.history["val_loss"], label="Val Loss")
+plt.plot(H.history["accuracy"], label="Train Accuracy")
+plt.plot(H.history["val_accuracy"], label="Val Accuracy")
+
+plt.legend()
+plt.show()

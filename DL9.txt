@@ -1,0 +1,104 @@
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+
+from keras.models import Model
+from keras.layers import Input, Dense
+from keras.regularizers import l1
+from keras.datasets import mnist
+
+
+(xtrain, ytrain), (xtest, ytest) = mnist.load_data()
+
+xtrain = xtrain / 255.0
+xtest = xtest / 255.0
+
+# Flatten Images (28 x 28 = 784)
+xtrain = xtrain.reshape(-1, 784)
+xtest = xtest.reshape(-1, 784)
+print(xtrain.shape)
+
+
+for i in range(10):
+
+    n = np.where(ytrain == i)[0][0]
+
+    plt.subplot(2, 5, i+1)
+    plt.imshow(xtrain[n].reshape(28, 28), cmap='gray')
+    plt.title(ytrain[n])
+    plt.axis('off')
+
+plt.show()
+
+
+input_img = Input(shape=(784,))
+
+encoded = Dense(128, activation='relu', activity_regularizer=l1(0.00001))(input_img)
+
+decoded = Dense(784, activation='sigmoid')(encoded)
+
+autoencoder = Model(input_img, decoded)
+
+autoencoder.compile(
+    optimizer='adam',
+    loss='binary_crossentropy'
+)
+
+autoencoder.summary()
+
+
+# 8. Train Model
+history = autoencoder.fit(
+    xtrain,
+    xtrain,
+    epochs=10,
+    batch_size=256,
+    shuffle=True,
+    validation_data=(xtest, xtest)
+)
+
+
+reconstructed = autoencoder.predict(xtest)
+
+plt.figure(figsize=(12, 5))
+
+for i in range(10):
+    n = np.where(ytest == i)[0][0]
+
+    plt.subplot(2, 10, i+1)
+    plt.imshow(xtest[n].reshape(28, 28), cmap='gray')
+    plt.title("Original " + str(i))
+    plt.axis('off')
+
+    plt.subplot(2, 10, i+11)
+    plt.imshow(reconstructed[n].reshape(28, 28), cmap='gray')
+    plt.title("After " + str(i))
+    plt.axis('off')
+
+plt.suptitle("Original vs Reconstructed MNIST images")
+plt.tight_layout()
+plt.show()
+
+
+# 10. Display Original and Reconstructed Images
+plt.figure(figsize=(12, 5))
+
+for i in range(10):
+
+    n = np.where(ytest == i)[0][0]
+
+    # Original Image
+    plt.subplot(2, 10, i + 1)
+    plt.imshow(xtest[n].reshape(28, 28), cmap='gray')
+    plt.title("Original " + str(i))
+    plt.axis('off')
+
+    # Reconstructed Image
+    plt.subplot(2, 10, i + 11)
+    plt.imshow(reconstructed[n].reshape(28, 28), cmap='gray')
+    plt.title("After " + str(i))
+    plt.axis('off')
+
+plt.suptitle("Original vs Reconstructed MNIST Images")
+plt.tight_layout()
+plt.show()

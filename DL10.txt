@@ -1,0 +1,108 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import confusion_matrix, classification_report
+
+from sklearn.metrics import accuracy_score
+from tensorflow import keras
+from tensorflow.keras import layers
+
+
+# Load Credit Card Dataset
+df = pd.read_csv('Credit Card Dataset/creditcard.csv')
+
+
+# 3. Separate input features and target labels
+X = df.drop("Class", axis=1)
+y = df["Class"]
+
+
+# 4. Split the dataset into training and testing data
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+
+# 5. Select only normal transactions for training
+X_train_normal = X_train[y_train == 0]
+
+
+# 6. Scale the data
+scaler = StandardScaler()
+X_train_normal = scaler.fit_transform(X_train_normal)
+X_test = scaler.transform(X_test)
+
+
+# 7. Build the Autoencoder model
+input_img = keras.Input(shape=(X_train_normal.shape[1],))
+
+# Encoder: Compress the input data
+encoded = layers.Dense(16, activation="relu")(input_img)
+encoded = layers.Dense(8, activation="relu")(encoded)
+
+# Decoder: Reconstruct the input data
+decoded = layers.Dense(16, activation="relu")(encoded)
+decoded = layers.Dense(X_train_normal.shape[1])(decoded)
+
+autoencoder = keras.Model(input_img, decoded)
+
+
+# 8. Compile the model
+autoencoder.compile(optimizer="adam", loss="mse")
+
+
+# 9. Train the Autoencoder using normal transactions
+autoencoder.fit(
+    X_train_normal, X_train_normal,
+    epochs=10,
+    batch_size=256,
+    shuffle=True
+)
+
+
+# 10. Calculate reconstruction error and anomaly threshold
+train_reconstructed = autoencoder.predict(X_train_normal)
+train_error = np.mean((X_train_normal - train_reconstructed) ** 2, axis=1)
+
+threshold = np.percentile(train_error, 95)
+print("Anomaly Threshold:", threshold)
+
+
+# 11. Detect fraud transactions
+reconstructed = autoencoder.predict(X_test)
+error = np.mean((X_test - reconstructed) ** 2, axis=1)
+
+# Error above threshold is classified as fraud
+predictions = (error > threshold).astype(int)
+
+
+# 12. Evaluate the model
+print("\nAccuracy:", accuracy_score(y_test, predictions))
+
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, predictions))
+
+print("\nClassification Report:")
+print(classification_report(y_test, predictions))
+
+
+# 13. Display reconstruction error graph
+plt.figure(figsize=(8, 4))
+
+plt.hist(error[y_test.values == 0], bins=50,
+         alpha=0.6, label="Normal")
+
+plt.hist(error[y_test.values == 1], bins=50,
+         alpha=0.6, label="Fraud")
+
+plt.axvline(threshold, color="red", label="Threshold")
+
+plt.xlim(0, np.percentile(error, 99))
+plt.xlabel("Reconstruction Error")
+plt.ylabel("Number of Transactions")
+plt.title("Credit Card Anomaly Detection")
+plt.legend()
+plt.show()

@@ -1,0 +1,122 @@
+# ==============================
+# RNN IMPLEMENTATION USING NUMPY
+# ==============================
+
+
+# 1. Import Libraries
+
+import numpy as np
+
+
+
+# 2. Activation Functions
+
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+
+def sigmoid_derivative(x):
+    return x * (1 - x)
+
+
+
+# 3. RNN Class
+
+class SimpleRNN:
+
+    def __init__(self, input_size, hidden_size, output_size, learning_rate=0.05):
+        self.hidden_size = hidden_size
+        self.lr = learning_rate
+
+        self.W_xh = np.random.randn(input_size, hidden_size) * 0.01
+        self.W_hh = np.random.randn(hidden_size, hidden_size) * 0.01
+        self.W_ho = np.random.randn(hidden_size, output_size)
+
+        self.b_h = np.zeros((1, hidden_size))
+        self.b_o = np.zeros((1, output_size))
+
+
+    # 4. Forward Propagation
+
+    def forward(self, inputs):
+        self.hidden_states = {}
+        self.outputs = {}
+        h = np.zeros((1, self.hidden_size))
+
+        for t, x in enumerate(inputs):
+            x = x.reshape(1, -1)
+            h = sigmoid(x @ self.W_xh + h @ self.W_hh + self.b_h)
+
+            self.hidden_states[t] = h
+            self.outputs[t] = h @ self.W_ho + self.b_o
+
+        return self.outputs[len(inputs)-1]
+
+
+    # 5. Backward Propagation (BPTT)
+
+    def backward(self, inputs, targets):
+        dWxh, dWhh = np.zeros_like(self.W_xh), np.zeros_like(self.W_hh)
+        dWho = np.zeros_like(self.W_ho)
+        dbh, dbo = np.zeros_like(self.b_h), np.zeros_like(self.b_o)
+        dh_next = np.zeros((1, self.hidden_size))
+
+        for t in reversed(range(len(inputs))):
+            x = inputs[t].reshape(1, -1)
+            h = self.hidden_states[t]
+            hp = self.hidden_states[t-1] if t > 0 else np.zeros_like(h)
+
+            dy = self.outputs[t] - targets[t].reshape(1, -1)
+            dWho += h.T @ dy
+            dbo += dy
+
+            dh = dy @ self.W_ho.T + dh_next
+            dh = dh * sigmoid_derivative(h)
+
+            dWxh += x.T @ dh
+            dWhh += hp.T @ dh
+            dbh += dh
+
+            dh_next = dh @ self.W_hh.T
+
+        self.W_xh -= self.lr * dWxh
+        self.W_hh -= self.lr * dWhh
+        self.W_ho -= self.lr * dWho
+        self.b_h -= self.lr * dbh
+        self.b_o -= self.lr * dbo
+
+
+
+# 6. Sample Dataset
+
+X = np.array([[0.1], [0.2], [0.3], [0.4], [0.5]])
+
+Y = np.array([[0.2], [0.4], [0.6], [0.8], [1.0]])
+
+
+
+# 7. Initialize and Train RNN
+
+rnn = SimpleRNN(1, 5, 1)
+
+print("Training RNN...")
+
+for epoch in range(1000):
+    pred = rnn.forward(X)
+    loss = np.mean((pred - Y[-1]) ** 2)
+
+    rnn.backward(X, Y)
+
+    if (epoch + 1) % 100 == 0:
+        print("Epoch:", epoch+1, "Loss:", round(loss, 4))
+
+
+
+# 8. Testing
+
+test = np.array([[0.6], [0.7], [0.8], [0.9], [1.0]])
+
+result = rnn.forward(test)
+
+print("Input Sequence:", test.flatten())
+print("Predicted Output:", result.flatten())
